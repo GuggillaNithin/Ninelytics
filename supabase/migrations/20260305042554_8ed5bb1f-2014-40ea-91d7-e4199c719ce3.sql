@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS analytics_data_unique_metric ON public.analytics_data (user_id, platform, date, metric_name);
