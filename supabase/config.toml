@@ -2,3 +2,6 @@ project_id = "dbgxuneppeupwfcrsbli"
 
 [functions.auth-instagram]
 verify_jwt = false
+
+[functions.fetch-instagram-data]
+verify_jwt = false
