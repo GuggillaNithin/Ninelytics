@@ -17,8 +17,8 @@ interface PlatformConfig {
 }
 
 const platforms: PlatformConfig[] = [
-  { id: "youtube", name: "YouTube", icon: Youtube, color: "text-destructive", edgeFunction: null },
-  { id: "google_analytics", name: "Google Analytics", icon: LineChart, color: "text-chart-3", edgeFunction: null },
+  { id: "youtube", name: "YouTube", icon: Youtube, color: "text-destructive", edgeFunction: "auth-youtube" },
+  { id: "google_analytics", name: "Google Analytics", icon: LineChart, color: "text-chart-3", edgeFunction: "auth-google-analytics" },
   { id: "facebook", name: "Facebook", icon: Facebook, color: "text-chart-5", edgeFunction: null },
   { id: "instagram", name: "Instagram", icon: Instagram, color: "text-chart-4", edgeFunction: "auth-instagram" },
   { id: "linkedin", name: "LinkedIn", icon: Linkedin, color: "text-chart-1", edgeFunction: null },
