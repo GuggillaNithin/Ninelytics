@@ -19,9 +19,9 @@ interface PlatformConfig {
 const platforms: PlatformConfig[] = [
   { id: "youtube", name: "YouTube", icon: Youtube, color: "text-destructive", edgeFunction: "auth-youtube" },
   { id: "google_analytics", name: "Google Analytics", icon: LineChart, color: "text-chart-3", edgeFunction: "auth-google-analytics" },
-  { id: "facebook", name: "Facebook", icon: Facebook, color: "text-chart-5", edgeFunction: "auth-facebook" },
+  { id: "facebook", name: "Facebook", icon: Facebook, color: "text-chart-5", edgeFunction: "auth-facebook"h-facebook" },
   { id: "instagram", name: "Instagram", icon: Instagram, color: "text-chart-4", edgeFunction: "auth-instagram" },
-  { id: "linkedin", name: "LinkedIn", icon: Linkedin, color: "text-chart-1", edgeFunction: null },
+  { id: "linkedin", name: "LinkedIn", icon: Linkedin, color: "text-chart-1", edg"auth-linkedin"ction: null },
 ];
 
 const ConnectionsPage = () => {
