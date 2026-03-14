@@ -54,7 +54,6 @@ Deno.serve(async (req) => {
 
     const orgId = account.platform_user_id;
     const orgName = account.platform_username || "LinkedIn";
-    const isOrg = !!orgId && orgId !== account.platform_user_id?.startsWith?.("urn") ? true : true;
 
     // Try to fetch organization data
     let orgData: any = null;
