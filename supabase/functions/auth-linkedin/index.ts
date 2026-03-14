@@ -12,10 +12,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/auth-linkedin?action=callback`;
-const APP_ORIGIN = SUPABASE_URL.replace(
-  "dbgxuneppeupwfcrsbli.supabase.co",
-  "unified-metrics-flow.lovable.app",
-);
+const APP_REDIRECT = "https://unified-metrics-flow.lovable.app/dashboard/connections";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -47,10 +44,13 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Use OpenID Connect scopes + organization scopes
       const scopes = [
+        "openid",
+        "profile",
+        "email",
         "r_organization_social",
         "rw_organization_admin",
-        "r_basicprofile",
       ].join(" ");
 
       const state = btoa(JSON.stringify({ user_id: user.id }));
@@ -76,19 +76,28 @@ Deno.serve(async (req) => {
       if (errorParam) {
         const errorDesc = url.searchParams.get("error_description") || "OAuth denied";
         return Response.redirect(
-          `${APP_ORIGIN}/dashboard/connections?error=${encodeURIComponent(errorDesc)}`,
+          `${APP_REDIRECT}?error=${encodeURIComponent(errorDesc)}`,
           302,
         );
       }
 
       if (!code || !stateParam) {
-        return new Response(JSON.stringify({ error: "Missing code or state" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return Response.redirect(
+          `${APP_REDIRECT}?error=${encodeURIComponent("Missing code or state")}`,
+          302,
+        );
       }
 
-      const { user_id } = JSON.parse(atob(stateParam));
+      let userId: string;
+      try {
+        const parsed = JSON.parse(atob(stateParam));
+        userId = parsed.user_id;
+      } catch {
+        return Response.redirect(
+          `${APP_REDIRECT}?error=${encodeURIComponent("Invalid state parameter")}`,
+          302,
+        );
+      }
 
       // Exchange code for access token
       const tokenRes = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
@@ -108,7 +117,7 @@ Deno.serve(async (req) => {
       if (tokenData.error) {
         console.error("Token exchange error:", tokenData);
         return Response.redirect(
-          `${APP_ORIGIN}/dashboard/connections?error=${encodeURIComponent(tokenData.error_description || "Token exchange failed")}`,
+          `${APP_REDIRECT}?error=${encodeURIComponent(tokenData.error_description || "Token exchange failed")}`,
           302,
         );
       }
@@ -117,16 +126,38 @@ Deno.serve(async (req) => {
       const expiresIn = tokenData.expires_in || 5184000;
       const refreshToken = tokenData.refresh_token || null;
 
-      // Get user profile to find organization admin memberships
-      const profileRes = await fetch("https://api.linkedin.com/v2/me", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const profileData = await profileRes.json();
-      const linkedinUserId = profileData.id;
-      const displayName = `${profileData.localizedFirstName || ""} ${profileData.localizedLastName || ""}`.trim();
+      // Get user profile using userinfo endpoint (OpenID Connect)
+      let linkedinUserId = "";
+      let displayName = "LinkedIn User";
+
+      try {
+        const userinfoRes = await fetch("https://api.linkedin.com/v2/userinfo", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (userinfoRes.ok) {
+          const userinfo = await userinfoRes.json();
+          linkedinUserId = userinfo.sub || "";
+          displayName = userinfo.name || `${userinfo.given_name || ""} ${userinfo.family_name || ""}`.trim() || "LinkedIn User";
+        }
+      } catch (e) {
+        console.warn("Could not fetch userinfo, falling back to /v2/me:", e);
+        // Fallback to legacy endpoint
+        try {
+          const profileRes = await fetch("https://api.linkedin.com/v2/me", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (profileRes.ok) {
+            const profileData = await profileRes.json();
+            linkedinUserId = profileData.id || "";
+            displayName = `${profileData.localizedFirstName || ""} ${profileData.localizedLastName || ""}`.trim() || "LinkedIn User";
+          }
+        } catch (e2) {
+          console.warn("Could not fetch /v2/me either:", e2);
+        }
+      }
 
       // Try to get organizations the user administers
-      let orgId = null;
+      let orgId: string | null = null;
       let orgName = displayName;
 
       try {
@@ -134,19 +165,28 @@ Deno.serve(async (req) => {
           `https://api.linkedin.com/v2/organizationalEntityAcls?q=roleAssignee&role=ADMINISTRATOR&projection=(elements*(organizationalTarget))`,
           { headers: { Authorization: `Bearer ${accessToken}` } },
         );
-        const orgData = await orgRes.json();
+        if (orgRes.ok) {
+          const orgData = await orgRes.json();
+          if (orgData.elements && orgData.elements.length > 0) {
+            const orgUrn = orgData.elements[0].organizationalTarget;
+            orgId = orgUrn.split(":").pop() || null;
 
-        if (orgData.elements && orgData.elements.length > 0) {
-          const orgUrn = orgData.elements[0].organizationalTarget;
-          orgId = orgUrn.split(":").pop();
-
-          // Fetch org name
-          const orgDetailRes = await fetch(
-            `https://api.linkedin.com/v2/organizations/${orgId}`,
-            { headers: { Authorization: `Bearer ${accessToken}` } },
-          );
-          const orgDetail = await orgDetailRes.json();
-          orgName = orgDetail.localizedName || orgName;
+            // Fetch org name
+            if (orgId) {
+              try {
+                const orgDetailRes = await fetch(
+                  `https://api.linkedin.com/v2/organizations/${orgId}`,
+                  { headers: { Authorization: `Bearer ${accessToken}` } },
+                );
+                if (orgDetailRes.ok) {
+                  const orgDetail = await orgDetailRes.json();
+                  orgName = orgDetail.localizedName || orgName;
+                }
+              } catch (e) {
+                console.warn("Could not fetch org detail:", e);
+              }
+            }
+          }
         }
       } catch (orgErr) {
         console.warn("Could not fetch org data:", orgErr);
@@ -160,7 +200,7 @@ Deno.serve(async (req) => {
         .from("social_accounts")
         .upsert(
           {
-            user_id,
+            user_id: userId,
             platform: "linkedin",
             access_token: accessToken,
             refresh_token: refreshToken,
@@ -173,9 +213,13 @@ Deno.serve(async (req) => {
 
       if (dbError) {
         console.error("DB upsert error:", dbError);
+        return Response.redirect(
+          `${APP_REDIRECT}?error=${encodeURIComponent("Failed to save connection")}`,
+          302,
+        );
       }
 
-      return Response.redirect(`${APP_ORIGIN}/dashboard/connections?connected=LinkedIn`, 302);
+      return Response.redirect(`${APP_REDIRECT}?connected=LinkedIn`, 302);
     }
 
     // ── Disconnect ──
