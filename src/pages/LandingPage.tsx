@@ -49,9 +49,7 @@ export default function LandingPage() {
       <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="w-8 h-8 rounded-none bg-primary flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src="/logo.png" alt="Ninelytics logo" className="w-9 h-9 object-contain" />
             <span className="text-xl font-bold tracking-tight">Ninelytics</span>
           </div>
 
@@ -483,9 +481,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 mb-16">
             <div className="col-span-2">
               <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 rounded-none bg-primary flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-primary-foreground" />
-                </div>
+                <img src="/logo.png" alt="Ninelytics logo" className="w-8 h-8 object-contain" />
                 <span className="text-xl font-bold tracking-tight">Ninelytics</span>
               </div>
               <p className="text-muted-foreground text-sm max-w-sm mb-6">
