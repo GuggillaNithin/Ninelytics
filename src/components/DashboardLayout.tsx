@@ -54,7 +54,7 @@ const DashboardLayout = () => {
     <>
       <div className="flex items-center gap-2 px-4 h-16 border-b border-border shrink-0">
         <BarChart3 className="h-7 w-7 text-primary" />
-        <span className="text-lg font-bold text-foreground">Analytics</span>
+        <span className="text-lg font-bold text-foreground">Ninelytics</span>
       </div>
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         {navItems.map((item) => (
