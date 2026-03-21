@@ -12,10 +12,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/auth-facebook?action=callback`;
-const APP_ORIGIN = SUPABASE_URL.replace(
-  "dbgxuneppeupwfcrsbli.supabase.co",
-  "unified-metrics-flow.lovable.app",
-);
+const APP_ORIGIN = "https://ninelytics.vercel.app";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {

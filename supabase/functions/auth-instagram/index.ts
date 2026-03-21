@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       if (errorParam) {
         const errorDesc = url.searchParams.get("error_description") || "OAuth denied";
         return Response.redirect(
-          `${url.origin.replace("dbgxuneppeupwfcrsbli.supabase.co", "unified-metrics-flow.lovable.app")}/dashboard/connections?error=${encodeURIComponent(errorDesc)}`,
+          `${url.origin.replace("qaffcpzknnlkecpcbmdj.supabase.co", "ninelytics.vercel.app")}/dashboard/connections?error=${encodeURIComponent(errorDesc)}`,
           302,
         );
       }
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       if (tokenData.error) {
         console.error("Token exchange error:", tokenData.error);
         return Response.redirect(
-          `${url.origin.replace("dbgxuneppeupwfcrsbli.supabase.co", "unified-metrics-flow.lovable.app")}/dashboard/connections?error=${encodeURIComponent(tokenData.error.message || "Token exchange failed")}`,
+          `${url.origin.replace("qaffcpzknnlkecpcbmdj.supabase.co", "ninelytics.vercel.app")}/dashboard/connections?error=${encodeURIComponent(tokenData.error.message || "Token exchange failed")}`,
           302,
         );
       }
@@ -180,8 +180,8 @@ Deno.serve(async (req) => {
 
       // Redirect back to dashboard
       const appOrigin = url.origin.replace(
-        "dbgxuneppeupwfcrsbli.supabase.co",
-        "unified-metrics-flow.lovable.app",
+        "qaffcpzknnlkecpcbmdj.supabase.co",
+        "ninelytics.vercel.app",
       );
       return Response.redirect(`${appOrigin}/dashboard/connections?connected=instagram`, 302);
     }
