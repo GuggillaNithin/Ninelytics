@@ -166,13 +166,19 @@ const LinkedInPage = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Post</TableHead>
+                  <TableHead className="text-right">Likes</TableHead>
+                  <TableHead className="text-right">Comments</TableHead>
+                  <TableHead className="text-right">Shares</TableHead>
                   <TableHead className="text-right">Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {posts.map((post) => (
+                {posts.map((post: any) => (
                   <TableRow key={post.id}>
-                    <TableCell className="max-w-[400px] truncate">{post.text || "—"}</TableCell>
+                    <TableCell className="max-w-[300px] truncate">{post.text || "—"}</TableCell>
+                    <TableCell className="text-right">{post.engagement?.likes || 0}</TableCell>
+                    <TableCell className="text-right">{post.engagement?.comments || 0}</TableCell>
+                    <TableCell className="text-right">{post.engagement?.shares || 0}</TableCell>
                     <TableCell className="text-right">
                       {post.created_time ? format(new Date(post.created_time), "MMM d, yyyy") : "—"}
                     </TableCell>

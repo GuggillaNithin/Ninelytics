@@ -34,7 +34,7 @@ export function useLinkedInData(days: number = 30) {
     queryFn: async () => {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/fetch-linkedin-data?days=${days}`,
+        `https://${projectId}.supabase.co/functions/v1/linkedin-analytics?days=${days}`,
         {
           headers: {
             Authorization: `Bearer ${session?.access_token}`,
