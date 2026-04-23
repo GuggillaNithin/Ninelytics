@@ -157,11 +157,11 @@ Deno.serve(async (req) => {
         );
         if (sharesRes.ok) {
           const sharesData = await sharesRes.json();
-          posts = (sharesData.elements || []).map((s: any) => ({
-            id: s.id,
-            text: s.text?.text || s.specificContent?.["com.linkedin.ugc.ShareContent"]?.shareCommentary?.text || "",
-            created_time: s.created?.time ? new Date(s.created.time).toISOString() : "",
-          }));
+          posts = sharesData.elements?.map((e: any) => ({
+            id: e.id,
+            text: e.commentary || e.specificContent?.["com.linkedin.ugc.ShareContent"]?.shareCommentary?.text || "",
+            created_time: e.created?.time ? new Date(e.created.time).toISOString() : new Date().toISOString(),
+          })) || [];
         }
       } catch (e) { console.warn("Could not fetch shares:", e); }
     }

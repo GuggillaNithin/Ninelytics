@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MetricCard from "@/components/MetricCard";
 import DashboardHeader from "@/components/DashboardHeader";
+import DateRangeFilter from "@/components/DateRangeFilter";
 import EmptyState from "@/components/EmptyState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -72,14 +74,28 @@ const LinkedInPage = () => {
 
   const { organization, engagement, posts, daily_metrics } = data;
 
-  const chartData = daily_metrics.map((d) => ({
-    date: format(new Date(d.date), "MMM d"),
-    views: d.pageViews,
-    likes: d.likes,
-    comments: d.comments,
+  if (!organization) {
+    return (
+      <div className="space-y-6">
+        <DashboardHeader title="LinkedIn Analytics" subtitle="Error" />
+        <EmptyState
+          icon={AlertCircle}
+          title="Invalid Data Format"
+          description="The LinkedIn API returned data in an unexpected format. Please try reconnecting your account."
+          action={<Button variant="outline" onClick={() => navigate("/dashboard/connections")}>Reconnect</Button>}
+        />
+      </div>
+    );
+  }
+
+  const chartData = (daily_metrics || []).map((d) => ({
+    date: d.date ? format(new Date(d.date), "MMM d") : "—",
+    views: d.pageViews || 0,
+    likes: d.likes || 0,
+    comments: d.comments || 0,
   }));
 
-  const totalEngagement = engagement.likes + engagement.comments + engagement.shares;
+  const totalEngagement = (engagement?.likes || 0) + (engagement?.comments || 0) + (engagement?.shares || 0);
 
   return (
     <div className="space-y-6">
