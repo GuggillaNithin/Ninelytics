@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Youtube, LineChart, Facebook, Instagram, Linkedin, Check, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSearchParams } from "react-router-dom";
+import { useLinkedInPages, useSelectLinkedInPage } from "@/hooks/useLinkedInPages";
 
 interface PlatformConfig {
   id: string;
@@ -30,6 +32,11 @@ const ConnectionsPage = () => {
   const [connectedPlatforms, setConnectedPlatforms] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
+  
+  // LinkedIn Page Selection State
+  const [showLinkedInDialog, setShowLinkedInDialog] = useState(false);
+  const { data: linkedinPagesData, isLoading: loadingPages } = useLinkedInPages();
+  const selectLinkedInPage = useSelectLinkedInPage();
 
   // Fetch connected accounts from DB
   const fetchConnections = async () => {
@@ -58,13 +65,32 @@ const ConnectionsPage = () => {
     if (connected) {
       toast.success(`${connected} connected successfully!`);
       setSearchParams({}, { replace: true });
-      fetchConnections();
+      fetchConnections().then(() => {
+        if (connected.toLowerCase() === "linkedin") {
+          setShowLinkedInDialog(true);
+        }
+      });
     }
     if (error) {
       toast.error(`Connection failed: ${error}`);
       setSearchParams({}, { replace: true });
     }
   }, [searchParams]);
+
+  // Handle auto-selection if only 1 page
+  useEffect(() => {
+    if (showLinkedInDialog && linkedinPagesData?.pages) {
+      if (linkedinPagesData.pages.length === 1) {
+        const page = linkedinPagesData.pages[0];
+        selectLinkedInPage.mutate({ orgId: page.id, orgName: page.name }, {
+          onSuccess: () => setShowLinkedInDialog(false)
+        });
+      } else if (linkedinPagesData.pages.length === 0) {
+        toast.error("You must be an Administrator of a LinkedIn Company Page to view analytics.");
+        setShowLinkedInDialog(false);
+      }
+    }
+  }, [showLinkedInDialog, linkedinPagesData]);
 
   const handleConnect = async (platform: PlatformConfig) => {
     if (!platform.edgeFunction) {
@@ -174,9 +200,16 @@ const ConnectionsPage = () => {
               </CardHeader>
               <CardContent>
                 {isConnected ? (
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => handleDisconnect(p)}>
-                    Disconnect
-                  </Button>
+                  <div className="flex gap-2">
+                    {p.id === "linkedin" && (
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => setShowLinkedInDialog(true)}>
+                        Select Page
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => handleDisconnect(p)}>
+                      Disconnect
+                    </Button>
+                  </div>
                 ) : (
                   <Button
                     size="sm"
@@ -192,6 +225,56 @@ const ConnectionsPage = () => {
           );
         })}
       </div>
+
+      {/* LinkedIn Page Selection Dialog */}
+      <Dialog open={showLinkedInDialog} onOpenChange={setShowLinkedInDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select LinkedIn Page</DialogTitle>
+            <DialogDescription>
+              Choose which LinkedIn Company Page you want to track analytics for.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {loadingPages ? (
+              <div className="flex justify-center p-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : linkedinPagesData?.pages && linkedinPagesData.pages.length > 0 ? (
+              <div className="grid gap-2">
+                {linkedinPagesData.pages.map((page) => (
+                  <Button
+                    key={page.id}
+                    variant="outline"
+                    className="justify-start h-auto py-3"
+                    onClick={() => selectLinkedInPage.mutate({ orgId: page.id, orgName: page.name }, {
+                      onSuccess: () => setShowLinkedInDialog(false)
+                    })}
+                    disabled={selectLinkedInPage.isPending}
+                  >
+                    <div className="flex items-center gap-3">
+                      {page.logo_url ? (
+                        <img src={page.logo_url} alt={page.name} className="h-8 w-8 rounded-full" />
+                      ) : (
+                        <Linkedin className="h-8 w-8 p-1 text-muted-foreground bg-muted rounded-full" />
+                      )}
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{page.name}</span>
+                        {page.vanity_name && <span className="text-xs text-muted-foreground">@{page.vanity_name}</span>}
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-4 text-muted-foreground border rounded-md bg-muted/50">
+                <p>No Company Pages found.</p>
+                <p className="text-sm mt-1">Make sure you are an Administrator for the page.</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

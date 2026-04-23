@@ -36,9 +36,9 @@ Deno.serve(async (req) => {
     if (accError || !account) throw new Error("LinkedIn not connected");
 
     const accessToken = account.access_token;
-    const orgId = account.platform_user_id;
+    const orgId = account.selected_org_id || account.platform_user_id;
 
-    if (!orgId) throw new Error("No organization ID");
+    if (!orgId) throw new Error("No organization ID selected or found");
 
     const orgUrn = `urn:li:organization:${orgId}`;
 
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         organization: {
-          name: account.platform_username || "LinkedIn",
+          name: account.selected_org_name || account.platform_username || "LinkedIn",
           vanity_name: "",
           followers_count: followers,
           page_views: impressions,
