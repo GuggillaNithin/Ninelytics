@@ -23,18 +23,18 @@ export interface LinkedInData {
     shares: number;
   };
   posts: LinkedInPost[];
-  history: { date: string; metric_name: string; metric_value: number }[];
+  daily_metrics: { date: string; pageViews: number; likes: number; comments: number; shares: number }[];
 }
 
-export function useLinkedInData() {
+export function useLinkedInData(days: number = 30) {
   const { session } = useAuth();
 
   return useQuery<LinkedInData>({
-    queryKey: ["linkedin-data", session?.user?.id],
+    queryKey: ["linkedin-data", session?.user?.id, days],
     queryFn: async () => {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/fetch-linkedin-data`,
+        `https://${projectId}.supabase.co/functions/v1/fetch-linkedin-data?days=${days}`,
         {
           headers: {
             Authorization: `Bearer ${session?.access_token}`,

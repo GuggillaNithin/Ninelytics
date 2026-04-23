@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
 
       // Use OpenID Connect scopes + organization scopes
       const scopes = [
-        "openid profile email"
+        "openid profile email r_organization_social rw_organization_admin"
       ].join(" ");
 
       const state = btoa(JSON.stringify({ user_id: user.id }));

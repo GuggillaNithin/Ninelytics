@@ -21,8 +21,9 @@ const tooltipStyle = {
 
 const LinkedInPage = () => {
   const navigate = useNavigate();
+  const [days, setDays] = useState(30);
   const { data: connection, isLoading: connLoading } = useLinkedInConnection();
-  const { data, isLoading, error, refetch, isFetching } = useLinkedInData();
+  const { data, isLoading, error, refetch, isFetching } = useLinkedInData(days);
 
   if (!connLoading && !connection) {
     return (
@@ -69,27 +70,14 @@ const LinkedInPage = () => {
     );
   }
 
-  const { organization, engagement, posts, history } = data;
+  const { organization, engagement, posts, daily_metrics } = data;
 
-  // Build followers history chart
-  const followersChart = history
-    .filter((h) => h.metric_name === "followers")
-    .map((h) => ({
-      date: format(new Date(h.date), "MMM d"),
-      followers: h.metric_value,
-    }));
-
-  // Build engagement history
-  const engagementChart = history
-    .filter((h) => h.metric_name === "likes")
-    .map((h) => {
-      const commentEntry = history.find((c) => c.metric_name === "comments" && c.date === h.date);
-      return {
-        date: format(new Date(h.date), "MMM d"),
-        likes: h.metric_value,
-        comments: commentEntry?.metric_value || 0,
-      };
-    });
+  const chartData = daily_metrics.map((d) => ({
+    date: format(new Date(d.date), "MMM d"),
+    views: d.pageViews,
+    likes: d.likes,
+    comments: d.comments,
+  }));
 
   const totalEngagement = engagement.likes + engagement.comments + engagement.shares;
 
@@ -100,52 +88,50 @@ const LinkedInPage = () => {
         subtitle={organization.name}
         onRefresh={() => refetch()}
         isRefreshing={isFetching}
-      />
+      >
+        <DateRangeFilter value={days} onChange={setDays} />
+      </DashboardHeader>
 
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Followers" value={organization.followers_count.toLocaleString()} icon={Users} />
-        <MetricCard title="Page Views" value={organization.page_views.toLocaleString()} icon={Eye} />
-        <MetricCard title="Total Engagement" value={totalEngagement.toLocaleString()} icon={TrendingUp} />
-        <MetricCard title="Shares" value={engagement.shares.toLocaleString()} icon={Share2} />
+        <MetricCard title={`Page Views (${days}d)`} value={organization.page_views.toLocaleString()} icon={Eye} />
+        <MetricCard title={`Engagement (${days}d)`} value={totalEngagement.toLocaleString()} icon={TrendingUp} />
+        <MetricCard title={`Shares (${days}d)`} value={engagement.shares.toLocaleString()} icon={Share2} />
       </div>
 
       {/* Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {followersChart.length > 1 && (
-          <Card>
-            <CardHeader><CardTitle>Followers Growth</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={followersChart}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Line type="monotone" dataKey="followers" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardHeader><CardTitle>Page Views Over Time</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Line type="monotone" dataKey="views" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-        {engagementChart.length > 0 && (
-          <Card>
-            <CardHeader><CardTitle>Engagement Over Time</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={engagementChart}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="likes" fill="hsl(var(--chart-1))" stackId="a" name="Likes" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="comments" fill="hsl(var(--chart-3))" stackId="a" name="Comments" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardHeader><CardTitle>Engagement Over Time</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="likes" fill="hsl(var(--chart-1))" stackId="a" name="Likes" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="comments" fill="hsl(var(--chart-3))" stackId="a" name="Comments" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Engagement Summary */}
