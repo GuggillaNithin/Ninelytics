@@ -11,7 +11,7 @@ const INSTAGRAM_APP_SECRET = Deno.env.get("INSTAGRAM_APP_SECRET")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Instagram Graph API uses Facebook's OAuth endpoint
+// Ensure this EXACT string matches your Meta App Dashboard > Instagram Settings > Valid OAuth Redirect URIs
 const REDIRECT_URI_BASE = `${SUPABASE_URL}/functions/v1/auth-instagram`;
 
 Deno.serve(async (req) => {
@@ -25,7 +25,6 @@ Deno.serve(async (req) => {
   try {
     // ── Step 1: Initiate OAuth ──
     if (action === "initiate") {
-      // Verify the user is authenticated
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -45,18 +44,19 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Build Instagram OAuth URL
-      // Instagram Business accounts use Facebook Login
+      // Using Instagram Login scopes
       const scopes = [
-        "instagram_basic",
-        "instagram_manage_insights",
-        "pages_show_list",
-        "pages_read_engagement",
+        "instagram_business_basic",
+        "instagram_business_manage_messages",
+        "instagram_business_manage_comments",
+        "instagram_business_content_publish",
+        "instagram_business_manage_insights"
       ].join(",");
 
       const state = btoa(JSON.stringify({ user_id: user.id }));
 
-      const authUrl = new URL("https://www.facebook.com/v19.0/dialog/oauth");
+      // Strictly using Instagram API authorization URL
+      const authUrl = new URL("https://api.instagram.com/oauth/authorize");
       authUrl.searchParams.set("client_id", INSTAGRAM_APP_ID);
       authUrl.searchParams.set("redirect_uri", `${REDIRECT_URI_BASE}?action=callback`);
       authUrl.searchParams.set("scope", scopes);
@@ -70,14 +70,19 @@ Deno.serve(async (req) => {
 
     // ── Step 2: Handle OAuth Callback ──
     if (action === "callback") {
-      const code = url.searchParams.get("code");
+      let code = url.searchParams.get("code");
       const stateParam = url.searchParams.get("state");
       const errorParam = url.searchParams.get("error");
+      
+      const appOrigin = url.origin.replace(
+        "qaffcpzknnlkecpcbmdj.supabase.co", // Fallback handling if testing
+        "ninelytics.vercel.app"
+      );
 
       if (errorParam) {
         const errorDesc = url.searchParams.get("error_description") || "OAuth denied";
         return Response.redirect(
-          `${url.origin.replace("qaffcpzknnlkecpcbmdj.supabase.co", "ninelytics.vercel.app")}/dashboard/connections?error=${encodeURIComponent(errorDesc)}`,
+          `${appOrigin}/dashboard/connections?error=${encodeURIComponent(errorDesc)}`,
           302,
         );
       }
@@ -89,35 +94,46 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Important: Instagram sometimes appends #_ to the code, which breaks the exchange
+      code = code.replace(/#_$/, "");
+
       // Decode state to get user_id
       const { user_id } = JSON.parse(atob(stateParam));
 
-      // Exchange code for access token
-      const tokenUrl = new URL("https://graph.facebook.com/v19.0/oauth/access_token");
-      tokenUrl.searchParams.set("client_id", INSTAGRAM_APP_ID);
-      tokenUrl.searchParams.set("redirect_uri", `${REDIRECT_URI_BASE}?action=callback`);
-      tokenUrl.searchParams.set("client_secret", INSTAGRAM_APP_SECRET);
-      tokenUrl.searchParams.set("code", code);
+      // Exchange code for short-lived access token
+      // Using form-urlencoded as required by api.instagram.com/oauth/access_token
+      const tokenFormData = new URLSearchParams();
+      tokenFormData.append("client_id", INSTAGRAM_APP_ID);
+      tokenFormData.append("client_secret", INSTAGRAM_APP_SECRET);
+      tokenFormData.append("grant_type", "authorization_code");
+      tokenFormData.append("redirect_uri", `${REDIRECT_URI_BASE}?action=callback`);
+      tokenFormData.append("code", code);
 
-      const tokenRes = await fetch(tokenUrl.toString());
+      const tokenRes = await fetch("https://api.instagram.com/oauth/access_token", {
+        method: "POST",
+        body: tokenFormData,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      });
+      
       const tokenData = await tokenRes.json();
 
-      if (tokenData.error) {
-        console.error("Token exchange error:", tokenData.error);
+      if (tokenData.error_type || tokenData.error_message) {
+        console.error("Token exchange error:", tokenData);
         return Response.redirect(
-          `${url.origin.replace("qaffcpzknnlkecpcbmdj.supabase.co", "ninelytics.vercel.app")}/dashboard/connections?error=${encodeURIComponent(tokenData.error.message || "Token exchange failed")}`,
+          `${appOrigin}/dashboard/connections?error=${encodeURIComponent(tokenData.error_message || "Token exchange failed")}`,
           302,
         );
       }
 
       const shortLivedToken = tokenData.access_token;
-
-      // Exchange for long-lived token
-      const longLivedUrl = new URL("https://graph.facebook.com/v19.0/oauth/access_token");
-      longLivedUrl.searchParams.set("grant_type", "fb_exchange_token");
-      longLivedUrl.searchParams.set("client_id", INSTAGRAM_APP_ID);
+      
+      // Exchange for long-lived token (Instagram API)
+      const longLivedUrl = new URL("https://graph.instagram.com/access_token");
+      longLivedUrl.searchParams.set("grant_type", "ig_exchange_token");
       longLivedUrl.searchParams.set("client_secret", INSTAGRAM_APP_SECRET);
-      longLivedUrl.searchParams.set("fb_exchange_token", shortLivedToken);
+      longLivedUrl.searchParams.set("access_token", shortLivedToken);
 
       const longLivedRes = await fetch(longLivedUrl.toString());
       const longLivedData = await longLivedRes.json();
@@ -125,34 +141,14 @@ Deno.serve(async (req) => {
       const accessToken = longLivedData.access_token || shortLivedToken;
       const expiresIn = longLivedData.expires_in || 5184000; // ~60 days default
 
-      // Get Instagram Business Account ID via Facebook Pages
-      const pagesRes = await fetch(
-        `https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`,
+      // Fetch the authenticated user's Instagram profile
+      const igProfileRes = await fetch(
+        `https://graph.instagram.com/v19.0/me?fields=id,username&access_token=${accessToken}`
       );
-      const pagesData = await pagesRes.json();
+      const igProfile = await igProfileRes.json();
 
-      let igUserId = null;
-      let igUsername = null;
-
-      if (pagesData.data && pagesData.data.length > 0) {
-        // Get the Instagram Business Account linked to the first page
-        const pageId = pagesData.data[0].id;
-        const igRes = await fetch(
-          `https://graph.facebook.com/v19.0/${pageId}?fields=instagram_business_account&access_token=${accessToken}`,
-        );
-        const igData = await igRes.json();
-
-        if (igData.instagram_business_account) {
-          igUserId = igData.instagram_business_account.id;
-
-          // Get Instagram username
-          const igProfileRes = await fetch(
-            `https://graph.facebook.com/v19.0/${igUserId}?fields=username&access_token=${accessToken}`,
-          );
-          const igProfile = await igProfileRes.json();
-          igUsername = igProfile.username || null;
-        }
-      }
+      const igUserId = igProfile.id || tokenData.user_id;
+      const igUsername = igProfile.username || null;
 
       // Store in Supabase
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -166,7 +162,7 @@ Deno.serve(async (req) => {
             user_id,
             platform: "instagram",
             access_token: accessToken,
-            refresh_token: null,
+            refresh_token: null, // Instagram long-lived tokens use a refresh endpoint later, no refresh token provided
             expires_at: expiresAt,
             platform_user_id: igUserId,
             platform_username: igUsername,
@@ -179,10 +175,6 @@ Deno.serve(async (req) => {
       }
 
       // Redirect back to dashboard
-      const appOrigin = url.origin.replace(
-        "qaffcpzknnlkecpcbmdj.supabase.co",
-        "ninelytics.vercel.app",
-      );
       return Response.redirect(`${appOrigin}/dashboard/connections?connected=instagram`, 302);
     }
 

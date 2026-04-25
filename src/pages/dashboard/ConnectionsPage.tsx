@@ -100,16 +100,11 @@ const ConnectionsPage = () => {
 
     setConnecting(platform.id);
     try {
-      const { data, error } = await supabase.functions.invoke(platform.edgeFunction, {
-        body: null,
-        headers: {},
-      });
-
       // The function returns a URL we need to call with GET and action=initiate
-      // But supabase.functions.invoke uses POST. Let's use fetch directly.
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      // We use the Supabase URL from environment variables
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/${platform.edgeFunction}?action=initiate`,
+        `${supabaseUrl}/functions/v1/${platform.edgeFunction}?action=initiate`,
         {
           headers: {
             Authorization: `Bearer ${session?.access_token}`,
