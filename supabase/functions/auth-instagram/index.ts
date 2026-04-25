@@ -11,7 +11,7 @@ const INSTAGRAM_APP_SECRET = Deno.env.get("INSTAGRAM_APP_SECRET")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Ensure this EXACT string matches your Meta App Dashboard > Instagram Settings > Valid OAuth Redirect URIs
+// The redirect URI must match exactly what is in the Meta App Dashboard
 const REDIRECT_URI_BASE = `${SUPABASE_URL}/functions/v1/auth-instagram`;
 
 Deno.serve(async (req) => {
@@ -21,6 +21,8 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
   const action = url.searchParams.get("action");
+  const code = url.searchParams.get("code");
+  const stateParam = url.searchParams.get("state");
 
   try {
     // ── Step 1: Initiate OAuth ──
@@ -58,7 +60,7 @@ Deno.serve(async (req) => {
       // Strictly using Instagram API authorization URL
       const authUrl = new URL("https://api.instagram.com/oauth/authorize");
       authUrl.searchParams.set("client_id", INSTAGRAM_APP_ID);
-      authUrl.searchParams.set("redirect_uri", `${REDIRECT_URI_BASE}?action=callback`);
+      authUrl.searchParams.set("redirect_uri", REDIRECT_URI_BASE);
       authUrl.searchParams.set("scope", scopes);
       authUrl.searchParams.set("state", state);
       authUrl.searchParams.set("response_type", "code");
@@ -69,13 +71,13 @@ Deno.serve(async (req) => {
     }
 
     // ── Step 2: Handle OAuth Callback ──
-    if (action === "callback") {
-      let code = url.searchParams.get("code");
-      const stateParam = url.searchParams.get("state");
+    // Instagram does not return custom query params, so we detect callback via code and state
+    if (code && stateParam) {
+      let finalCode = code;
       const errorParam = url.searchParams.get("error");
       
       const appOrigin = url.origin.replace(
-        "qaffcpzknnlkecpcbmdj.supabase.co", // Fallback handling if testing
+        "arlnboevgndtpnprolhz.supabase.co", 
         "ninelytics.vercel.app"
       );
 
@@ -87,27 +89,19 @@ Deno.serve(async (req) => {
         );
       }
 
-      if (!code || !stateParam) {
-        return new Response(JSON.stringify({ error: "Missing code or state" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
       // Important: Instagram sometimes appends #_ to the code, which breaks the exchange
-      code = code.replace(/#_$/, "");
+      finalCode = finalCode.replace(/#_$/, "");
 
       // Decode state to get user_id
       const { user_id } = JSON.parse(atob(stateParam));
 
       // Exchange code for short-lived access token
-      // Using form-urlencoded as required by api.instagram.com/oauth/access_token
       const tokenFormData = new URLSearchParams();
       tokenFormData.append("client_id", INSTAGRAM_APP_ID);
       tokenFormData.append("client_secret", INSTAGRAM_APP_SECRET);
       tokenFormData.append("grant_type", "authorization_code");
-      tokenFormData.append("redirect_uri", `${REDIRECT_URI_BASE}?action=callback`);
-      tokenFormData.append("code", code);
+      tokenFormData.append("redirect_uri", REDIRECT_URI_BASE);
+      tokenFormData.append("code", finalCode);
 
       const tokenRes = await fetch("https://api.instagram.com/oauth/access_token", {
         method: "POST",
@@ -162,7 +156,7 @@ Deno.serve(async (req) => {
             user_id,
             platform: "instagram",
             access_token: accessToken,
-            refresh_token: null, // Instagram long-lived tokens use a refresh endpoint later, no refresh token provided
+            refresh_token: null, 
             expires_at: expiresAt,
             platform_user_id: igUserId,
             platform_username: igUsername,
