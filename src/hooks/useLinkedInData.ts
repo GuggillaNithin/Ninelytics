@@ -26,6 +26,24 @@ export interface LinkedInData {
   daily_metrics: { date: string; pageViews: number; likes: number; comments: number; shares: number }[];
 }
 
+export interface LinkedInMockProfile {
+  id: string;
+  name: string;
+  email: string;
+  picture: string;
+}
+
+export interface LinkedInMockPage {
+  id: string;
+  name: string;
+  logo: string;
+}
+
+export interface LinkedInMockData {
+  profile: LinkedInMockProfile;
+  pages: LinkedInMockPage[];
+}
+
 export function useLinkedInData(days: number = 30) {
   const { session } = useAuth();
 
@@ -50,6 +68,35 @@ export function useLinkedInData(days: number = 30) {
     },
     enabled: !!session?.access_token,
     refetchInterval: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useLinkedInMockData() {
+  const { session } = useAuth();
+
+  return useQuery<LinkedInMockData>({
+    queryKey: ["linkedin-mock-data", session?.user?.id],
+    queryFn: async () => {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/linkedin-mock-data`,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to fetch mocked LinkedIn data");
+      }
+
+      return res.json();
+    },
+    enabled: !!session?.access_token,
     staleTime: 5 * 60 * 1000,
   });
 }

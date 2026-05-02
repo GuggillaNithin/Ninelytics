@@ -84,6 +84,8 @@ export type Database = {
           platform_user_id: string | null
           platform_username: string | null
           refresh_token: string | null
+          selected_org_id: string | null
+          selected_org_name: string | null
           updated_at: string
           user_id: string
         }
@@ -96,6 +98,8 @@ export type Database = {
           platform_user_id?: string | null
           platform_username?: string | null
           refresh_token?: string | null
+          selected_org_id?: string | null
+          selected_org_name?: string | null
           updated_at?: string
           user_id: string
         }
@@ -108,6 +112,8 @@ export type Database = {
           platform_user_id?: string | null
           platform_username?: string | null
           refresh_token?: string | null
+          selected_org_id?: string | null
+          selected_org_name?: string | null
           updated_at?: string
           user_id?: string
         }

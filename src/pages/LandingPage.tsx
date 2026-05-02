@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,80 @@ export default function LandingPage() {
   useEffect(() => {
     if (user) navigate("/dashboard");
   }, [user, navigate]);
+
+  const [isFeatureVisible, setIsFeatureVisible] = useState(false);
+  const featureRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsFeatureVisible(true);
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.2 }
+    );
+
+    if (featureRef.current) {
+      observer.observe(featureRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const [activeFeature, setActiveFeature] = useState(0);
+  const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
+
+  const featuresList = [
+    {
+      title: "Manual Data Entry",
+      description: "Auto-fill forms, sync data between tools instantly. Our AI parses incoming data and maps it to your existing fields automatically.",
+      icon: LayoutDashboard,
+      image: "/images/feature1.png"
+    },
+    {
+      title: "Missed Opportunities",
+      description: "Stop losing leads, automate follow-ups and instantly close deals faster. Never let a prospect fall through the cracks again.",
+      icon: Workflow,
+      image: "/images/feature2.png"
+    },
+    {
+      title: "Slow Response Times",
+      description: "Connect to CRM, send instant notifications and alerts. Respond to customer inquiries in seconds, not hours.",
+      icon: Timer,
+      image: "/images/feature3.png"
+    },
+    {
+      title: "Human Error",
+      description: "No more copy-paste mistakes. 100% data accuracy guaranteed through automated validation and verification workflows.",
+      icon: ShieldCheck,
+      image: "/images/feature4.png"
+    }
+  ];
+
+  useEffect(() => {
+    const observers = cardsRef.current.map((card, index) => {
+      if (!card) return null;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setActiveFeature(index);
+          }
+        },
+        { 
+          threshold: 0.6,
+          rootMargin: "-10% 0px -10% 0px"
+        }
+      );
+      observer.observe(card);
+      return observer;
+    });
+
+    return () => {
+      observers.forEach(o => o?.disconnect());
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20">
@@ -105,31 +179,16 @@ export default function LandingPage() {
                   <div className="w-3 h-3 rounded-full bg-green-400" />
                 </div>
                 <div className="mx-auto bg-background border border-border rounded-md text-xs text-muted-foreground px-12 py-1.5 flex items-center gap-2">
-                  <Lock className="h-3 w-3" /> flowsync.app/dashboard
+                  <Lock className="h-3 w-3" /> ninelytics.in/dashboard
                 </div>
               </div>
               {/* Mockup Body */}
-              <div className="flex h-[400px] md:h-[600px] bg-background">
-                {/* Sidebar */}
-                <div className="w-16 md:w-64 border-r border-border bg-card/50 p-4 space-y-4">
-                  <div className="h-8 bg-muted rounded-none w-full" />
-                  <div className="h-4 bg-muted rounded-none w-3/4 hidden md:block" />
-                  <div className="h-4 bg-muted rounded-none w-1/2 hidden md:block" />
-                  <div className="h-4 bg-muted rounded-none w-2/3 hidden md:block" />
-                </div>
-                {/* Main Content */}
-                <div className="flex-1 p-6 md:p-8 space-y-6 overflow-hidden">
-                  <div className="flex justify-between items-center">
-                    <div className="h-8 bg-muted rounded-none w-48" />
-                    <div className="h-8 bg-muted rounded-none w-24" />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="h-32 bg-card border border-border rounded-none" />
-                    <div className="h-32 bg-card border border-border rounded-none" />
-                    <div className="h-32 bg-card border border-border rounded-none" />
-                  </div>
-                  <div className="h-64 bg-card border border-border rounded-none" />
-                </div>
+              <div className="relative bg-background">
+                <img 
+                  src="/images/dashboard1.png" 
+                  alt="Ninelytics Dashboard" 
+                  className="w-full h-auto"
+                />
               </div>
             </div>
           </div>
@@ -160,103 +219,97 @@ export default function LandingPage() {
                 AI-Driven Platform<br/>Designed to<br/>Automate Workflows
               </h2>
               <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
-                At FlowSync, we build tools that empower businesses to work smarter, scale faster, and deliver better experiences using AI automation. Our platform learns your habits to optimize your daily routines intuitively.
+                At Ninelytics, we build tools that empower businesses to work smarter, scale faster, and deliver better experiences using AI automation. Our platform learns your habits to optimize your daily routines intuitively.
               </p>
               <Button size="lg" className="rounded-none shadow-lg shadow-primary/20">
                 Get Started
               </Button>
             </div>
-            {/* 3D Abstract Illustration Placeholder */}
-            <div className="relative h-[400px] w-full flex items-center justify-center">
-              <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent rounded-full blur-3xl" />
-              <div className="relative z-10 w-64 h-64 md:w-80 md:h-80 bg-card/60 backdrop-blur-xl border border-border/50 shadow-2xl rotate-12 flex flex-col items-center justify-center p-6 gap-4 transform hover:rotate-0 transition-transform duration-700">
-                <div className="w-full bg-background border border-primary/20 p-3 flex items-center gap-3 shadow-sm">
-                  <div className="bg-primary/10 p-2"><CheckCircle2 className="h-5 w-5 text-primary" /></div>
-                  <span className="font-semibold text-sm">94% Data Accuracy</span>
-                </div>
-                <div className="w-full bg-background border border-primary/20 p-3 flex items-center gap-3 shadow-sm transform translate-x-4">
-                  <div className="bg-primary/10 p-2"><Zap className="h-5 w-5 text-primary" /></div>
-                  <span className="font-semibold text-sm">5M+ Workflows Run</span>
-                </div>
-                <div className="w-full bg-background border border-primary/20 p-3 flex items-center gap-3 shadow-sm transform -translate-x-2">
-                  <div className="bg-primary/10 p-2"><Timer className="h-5 w-5 text-primary" /></div>
-                  <span className="font-semibold text-sm">75% Time Saved</span>
-                </div>
-                <div className="w-full bg-background border border-primary/20 p-3 flex items-center gap-3 shadow-sm transform translate-x-6">
-                  <div className="bg-primary/10 p-2"><Layers className="h-5 w-5 text-primary" /></div>
-                  <span className="font-semibold text-sm">1000+ Apps Integrated</span>
-                </div>
+            {/* Animated Dashboard Image */}
+            <div ref={featureRef} className="relative h-[500px] w-full flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent rounded-full blur-3xl opacity-50" />
+              <div className={`relative z-10 w-full max-w-2xl transition-all duration-1000 ease-out ${
+                isFeatureVisible 
+                  ? "opacity-100 translate-y-0 scale-100" 
+                  : "opacity-0 translate-y-20 scale-95"
+              }`}>
+                <img 
+                  src="/images/dashboard2.png" 
+                  alt="Ninelytics Dashboard Features" 
+                  className="w-full h-auto shadow-2xl rounded-lg border border-border/50"
+                />
+                <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-primary/10 rounded-full blur-2xl -z-10 animate-pulse" />
+                <div className="absolute -top-6 -left-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl -z-10 animate-pulse" />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Feature 2: Built to Fix That */}
-      <section className="py-24 bg-muted/30">
-        <div className="container px-4 md:px-6 mx-auto text-center mb-16">
-          <p className="text-primary font-semibold tracking-wider uppercase mb-2">The Solution</p>
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">FlowSync is Built to Fix That</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-            If you feel your business is overwhelmed with manual tasks, FlowSync is your friend.
-          </p>
-        </div>
-        
-        <div className="container px-4 md:px-6 mx-auto grid lg:grid-cols-2 gap-12 items-center">
-          <div className="relative rounded-none overflow-hidden aspect-[4/3] shadow-2xl">
-            <img 
-              src="https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&q=80&w=800" 
-              alt="Woman working happily at laptop" 
-              className="object-cover w-full h-full"
-            />
-            <div className="absolute inset-0 bg-primary/10 mix-blend-overlay" />
+      {/* Feature 2: Sticky Scroll Solution */}
+      <section className="py-24 bg-muted/30 relative">
+        <div className="container px-4 md:px-6 mx-auto">
+          <div className="text-center mb-20">
+            <p className="text-primary font-semibold tracking-wider uppercase mb-2">The Solution</p>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">Ninelytics is Built to Fix That</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+              Experience a new era of business efficiency with our automated ecosystem.
+            </p>
           </div>
+          
+          <div className="flex flex-col lg:flex-row gap-16 items-start relative">
+            {/* Left Side: Sticky Image */}
+            <div className="w-full lg:w-1/2 lg:sticky lg:top-32 order-2 lg:order-1">
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-none shadow-2xl border border-border bg-card">
+                {featuresList.map((f, i) => (
+                  <img 
+                    key={i}
+                    src={f.image}
+                    alt={f.title}
+                    className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-in-out ${
+                      activeFeature === i ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-110 rotate-1 pointer-events-none'
+                    }`}
+                  />
+                ))}
+                <div className="absolute inset-0 bg-primary/5 mix-blend-overlay" />
+                <div className="absolute bottom-4 left-4 right-4 h-1 bg-muted/20 overflow-hidden">
+                  <div 
+                    className="h-full bg-primary transition-all duration-500 ease-out"
+                    style={{ width: `${((activeFeature + 1) / featuresList.length) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
 
-          <div className="grid sm:grid-cols-2 gap-6">
-            <Card className="rounded-none border-border/50 shadow-md flex flex-col justify-between">
-              <CardHeader className="pb-2">
-                <div className="w-10 h-10 bg-primary/10 flex items-center justify-center mb-4">
-                  <LayoutDashboard className="h-5 w-5 text-primary" />
+            {/* Right Side: Scrolling Content */}
+            <div className="w-full lg:w-1/2 space-y-40 py-12 order-1 lg:order-2">
+              {featuresList.map((f, i) => (
+                <div 
+                  key={i} 
+                  ref={el => cardsRef.current[i] = el}
+                  className="min-h-[400px] flex flex-col justify-center"
+                >
+                  <Card className={`rounded-none border-border shadow-2xl transition-all duration-700 bg-card p-10 group ${
+                    activeFeature === i 
+                      ? 'ring-1 ring-primary border-transparent translate-x-2' 
+                      : 'opacity-30 scale-95 grayscale'
+                  }`}>
+                    <div className={`w-14 h-14 bg-primary/10 flex items-center justify-center mb-8 transition-colors duration-500 ${
+                      activeFeature === i ? 'bg-primary text-primary-foreground' : ''
+                    }`}>
+                      <f.icon className="h-7 w-7" />
+                    </div>
+                    <h3 className="text-3xl font-bold mb-6">{f.title}</h3>
+                    <p className="text-muted-foreground text-xl leading-relaxed">
+                      {f.description}
+                    </p>
+                    <div className={`mt-8 h-1 w-0 bg-primary transition-all duration-1000 ${
+                      activeFeature === i ? 'w-24' : ''
+                    }`} />
+                  </Card>
                 </div>
-                <CardTitle className="text-lg">Manual Data Entry</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-sm">Auto-fill forms, sync data between tools instantly.</CardDescription>
-              </CardContent>
-            </Card>
-            <Card className="rounded-none border-border/50 shadow-md flex flex-col justify-between">
-              <CardHeader className="pb-2">
-                <div className="w-10 h-10 bg-primary/10 flex items-center justify-center mb-4">
-                  <Workflow className="h-5 w-5 text-primary" />
-                </div>
-                <CardTitle className="text-lg">Missed Opportunities</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-sm">Stop losing leads, automate follow-ups and instantly close deals faster.</CardDescription>
-              </CardContent>
-            </Card>
-            <Card className="rounded-none border-border/50 shadow-md flex flex-col justify-between">
-              <CardHeader className="pb-2">
-                <div className="w-10 h-10 bg-primary/10 flex items-center justify-center mb-4">
-                  <Timer className="h-5 w-5 text-primary" />
-                </div>
-                <CardTitle className="text-lg">Slow Response Times</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-sm">Connect to CRM, send instant notifications and alerts.</CardDescription>
-              </CardContent>
-            </Card>
-            <Card className="rounded-none border-border/50 shadow-md flex flex-col justify-between">
-              <CardHeader className="pb-2">
-                <div className="w-10 h-10 bg-primary/10 flex items-center justify-center mb-4">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
-                </div>
-                <CardTitle className="text-lg">Human Error</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-sm">No more copy-paste mistakes. 100% data accuracy guaranteed.</CardDescription>
-              </CardContent>
-            </Card>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -271,7 +324,7 @@ export default function LandingPage() {
                 <p className="text-primary font-semibold tracking-wider uppercase mb-2">How It Works</p>
                 <h2 className="text-3xl md:text-5xl font-bold mb-6">Automate In<br/>3 Steps!</h2>
                 <p className="text-muted-foreground text-lg mb-8">
-                  FlowSync handles the heavy lifting, connecting your favorite apps so you can focus on what matters most to your business.
+                  Ninelytics handles the heavy lifting, connecting your favorite apps so you can focus on what matters most to your business.
                 </p>
                 <div className="flex gap-4">
                   <Button size="lg" className="rounded-none px-8">Log In</Button>
@@ -343,7 +396,7 @@ export default function LandingPage() {
           <p className="text-primary font-semibold tracking-wider uppercase mb-2">Ecosystem</p>
           <h2 className="text-3xl md:text-5xl font-bold mb-6">Connect, Automate, and Scale</h2>
           <p className="text-muted-foreground text-lg mb-16">
-            You can direct the relevant data to different apps sending a single API request to FlowSync.
+            You can direct the relevant data to different apps sending a single API request to Ninelytics.
           </p>
 
           <div className="relative h-64 md:h-80 flex items-center justify-center">
@@ -526,7 +579,7 @@ export default function LandingPage() {
           </div>
           
           <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
-            <p>© {new Date().getFullYear()} FlowSync Inc. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Ninelytics. All rights reserved.</p>
             <div className="flex gap-4">
               <a href="#" className="hover:text-foreground">Privacy Policy</a>
               <a href="#" className="hover:text-foreground">Terms of Service</a>

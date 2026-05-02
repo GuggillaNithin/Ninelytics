@@ -1,40 +1,50 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import MetricCard from "@/components/MetricCard";
 import DashboardHeader from "@/components/DashboardHeader";
-import DateRangeFilter from "@/components/DateRangeFilter";
 import EmptyState from "@/components/EmptyState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Eye, Heart, MessageSquare, Share2, Linkedin, AlertCircle, TrendingUp } from "lucide-react";
-import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts";
-import { useLinkedInData, useLinkedInConnection } from "@/hooks/useLinkedInData";
-import { format } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AlertCircle, Building2, CheckCircle2, Linkedin } from "lucide-react";
+import { useLinkedInConnection, useLinkedInMockData } from "@/hooks/useLinkedInData";
+import { useSelectLinkedInPage } from "@/hooks/useLinkedInPages";
+import { cn } from "@/lib/utils";
+import { LinkedInPostScheduler } from "@/components/LinkedInPostScheduler";
 
-const tooltipStyle = {
-  backgroundColor: "hsl(var(--card))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: "var(--radius)",
-};
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
 
 const LinkedInPage = () => {
   const navigate = useNavigate();
-  const [days, setDays] = useState(30);
   const { data: connection, isLoading: connLoading } = useLinkedInConnection();
-  const { data, isLoading, error, refetch, isFetching } = useLinkedInData(days);
+  const { data, isLoading, error, refetch, isFetching } = useLinkedInMockData();
+  const selectLinkedInPage = useSelectLinkedInPage();
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedPageId && data?.pages?.length) {
+      setSelectedPageId(data.pages[0].id);
+    }
+  }, [data?.pages, selectedPageId]);
 
   if (!connLoading && !connection) {
     return (
       <div className="space-y-6">
-        <DashboardHeader title="LinkedIn Analytics" subtitle="Connect your LinkedIn Company Page to see analytics" />
+        <DashboardHeader
+          title="LinkedIn Connection"
+          subtitle="Connect your LinkedIn profile to preview mocked page data"
+        />
         <EmptyState
           icon={Linkedin}
           title="LinkedIn Not Connected"
-          description="Connect your LinkedIn Company Page to start tracking followers, engagement, and post performance."
+          description="Connect LinkedIn first, then we will show the mocked profile and page selection experience."
           action={<Button onClick={() => navigate("/dashboard/connections")}>Connect LinkedIn</Button>}
         />
       </div>
@@ -44,10 +54,11 @@ const LinkedInPage = () => {
   if (isLoading || connLoading) {
     return (
       <div className="space-y-6">
-        <DashboardHeader title="LinkedIn Analytics" subtitle="Loading your LinkedIn data…" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
-        </div>
+        <DashboardHeader
+          title="LinkedIn Connection"
+          subtitle="Loading your mocked LinkedIn workspace..."
+        />
+        <Skeleton className="h-36 rounded-xl" />
         <Skeleton className="h-72 rounded-xl" />
       </div>
     );
@@ -56,15 +67,20 @@ const LinkedInPage = () => {
   if (error || !data) {
     return (
       <div className="space-y-6">
-        <DashboardHeader title="LinkedIn Analytics" subtitle="There was a problem loading your data" />
+        <DashboardHeader
+          title="LinkedIn Connection"
+          subtitle="There was a problem loading your mocked LinkedIn data"
+        />
         <EmptyState
           icon={AlertCircle}
-          title="Failed to Load Data"
-          description={error?.message || "Could not fetch LinkedIn analytics."}
+          title="Failed to Load Mock Data"
+          description={error?.message || "Could not fetch mocked LinkedIn data."}
           action={
             <div className="flex gap-2">
               <Button onClick={() => refetch()}>Retry</Button>
-              <Button variant="outline" onClick={() => navigate("/dashboard/connections")}>Reconnect</Button>
+              <Button variant="outline" onClick={() => navigate("/dashboard/connections")}>
+                Manage Connection
+              </Button>
             </div>
           }
         />
@@ -72,135 +88,134 @@ const LinkedInPage = () => {
     );
   }
 
-  const { organization, engagement, posts, daily_metrics } = data;
-
-  if (!organization) {
-    return (
-      <div className="space-y-6">
-        <DashboardHeader title="LinkedIn Analytics" subtitle="Error" />
-        <EmptyState
-          icon={AlertCircle}
-          title="Invalid Data Format"
-          description="The LinkedIn API returned data in an unexpected format. Please try reconnecting your account."
-          action={<Button variant="outline" onClick={() => navigate("/dashboard/connections")}>Reconnect</Button>}
-        />
-      </div>
-    );
-  }
-
-  const chartData = (daily_metrics || []).map((d) => ({
-    date: d.date ? format(new Date(d.date), "MMM d") : "—",
-    views: d.pageViews || 0,
-    likes: d.likes || 0,
-    comments: d.comments || 0,
-  }));
-
-  const totalEngagement = (engagement?.likes || 0) + (engagement?.comments || 0) + (engagement?.shares || 0);
+  const { profile, pages } = data;
+  const selectedPage = pages.find((page) => page.id === selectedPageId) ?? null;
 
   return (
     <div className="space-y-6">
       <DashboardHeader
-        title="LinkedIn Analytics"
-        subtitle={organization.name}
+        title="LinkedIn Connection"
+        subtitle="Mocked LinkedIn profile and page data for the connected account"
         onRefresh={() => refetch()}
         isRefreshing={isFetching}
-      >
-        <DateRangeFilter value={days} onChange={setDays} />
-      </DashboardHeader>
+      />
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Followers" value={organization.followers_count.toLocaleString()} icon={Users} />
-        <MetricCard title={`Page Views (${days}d)`} value={organization.page_views.toLocaleString()} icon={Eye} />
-        <MetricCard title={`Engagement (${days}d)`} value={totalEngagement.toLocaleString()} icon={TrendingUp} />
-        <MetricCard title={`Shares (${days}d)`} value={engagement.shares.toLocaleString()} icon={Share2} />
-      </div>
-
-      {/* Charts */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <Card>
-          <CardHeader><CardTitle>Page Views Over Time</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Connected Profile</CardTitle>
+          </CardHeader>
           <CardContent>
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Line type="monotone" dataKey="views" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-[280px] items-center justify-center text-muted-foreground">
-                No historical view data available for this period.
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              <Avatar className="h-20 w-20 border">
+                <AvatarImage src={profile.picture} alt={profile.name} />
+                <AvatarFallback>{getInitials(profile.name)}</AvatarFallback>
+              </Avatar>
+
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xl font-semibold text-foreground">{profile.name}</p>
+                  <p className="text-sm text-muted-foreground">{profile.email}</p>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                  <CheckCircle2 className="h-4 w-4" />
+                  LinkedIn connected successfully
+                </div>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Engagement Over Time</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Selected Page</CardTitle>
+          </CardHeader>
           <CardContent>
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="likes" fill="hsl(var(--chart-1))" stackId="a" name="Likes" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="comments" fill="hsl(var(--chart-3))" stackId="a" name="Comments" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-[280px] items-center justify-center text-muted-foreground">
-                No historical engagement data available for this period.
+            {selectedPage ? (
+              <div className="flex items-center gap-4">
+                <img
+                  src={selectedPage.logo}
+                  alt={selectedPage.name}
+                  className="h-16 w-16 rounded-2xl border object-cover"
+                />
+                <div>
+                  <p className="font-semibold text-foreground">{selectedPage.name}</p>
+                  <p className="text-sm text-muted-foreground">Selected for analytics preview</p>
+                </div>
               </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">Select a page to continue.</div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Engagement Summary */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <MetricCard title="Total Likes" value={engagement.likes.toLocaleString()} icon={Heart} />
-        <MetricCard title="Total Comments" value={engagement.comments.toLocaleString()} icon={MessageSquare} />
-        <MetricCard title="Total Shares" value={engagement.shares.toLocaleString()} icon={Share2} />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>LinkedIn Pages</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {pages.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+              No mocked LinkedIn pages available.
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {pages.map((page) => {
+                const isSelected = selectedPageId === page.id;
 
-      {/* Recent Posts */}
-      {posts.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle>Recent Posts</CardTitle></CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Post</TableHead>
-                  <TableHead className="text-right">Likes</TableHead>
-                  <TableHead className="text-right">Comments</TableHead>
-                  <TableHead className="text-right">Shares</TableHead>
-                  <TableHead className="text-right">Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {posts.map((post: any) => (
-                  <TableRow key={post.id}>
-                    <TableCell className="max-w-[300px] truncate">{post.text || "—"}</TableCell>
-                    <TableCell className="text-right">{post.engagement?.likes || 0}</TableCell>
-                    <TableCell className="text-right">{post.engagement?.comments || 0}</TableCell>
-                    <TableCell className="text-right">{post.engagement?.shares || 0}</TableCell>
-                    <TableCell className="text-right">
-                      {post.created_time ? format(new Date(post.created_time), "MMM d, yyyy") : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                return (
+                  <div
+                    key={page.id}
+                    className={cn(
+                      "flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors",
+                      isSelected && "border-primary bg-primary/5",
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={page.logo}
+                        alt={page.name}
+                        className="h-12 w-12 rounded-xl border object-cover"
+                      />
+                      <div>
+                        <p className="font-medium text-foreground">{page.name}</p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Building2 className="h-4 w-4" />
+                           LinkedIn organization
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant={isSelected ? "default" : "outline"}
+                      disabled={selectLinkedInPage.isPending}
+                      onClick={() => {
+                        setSelectedPageId(page.id);
+                        selectLinkedInPage.mutate({ pageId: page.id });
+                      }}
+                    >
+                      {isSelected ? "Selected" : "Select"}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <LinkedInPostScheduler
+        selectedPage={
+          selectedPage
+            ? {
+                id: selectedPage.id,
+                name: selectedPage.name,
+                logo: selectedPage.logo,
+              }
+            : null
+        }
+      />
     </div>
   );
 };
