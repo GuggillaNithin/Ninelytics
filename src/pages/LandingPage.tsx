@@ -72,19 +72,19 @@ export default function LandingPage() {
       title: "Manual Data Entry",
       description: "Auto-fill forms, sync data between tools instantly. Our AI parses incoming data and maps it to your existing fields automatically.",
       icon: LayoutDashboard,
-      image: "/images/feature1.png"
+      image: "/images/img1.png"
     },
     {
       title: "Missed Opportunities",
       description: "Stop losing leads, automate follow-ups and instantly close deals faster. Never let a prospect fall through the cracks again.",
       icon: Workflow,
-      image: "/images/feature2.png"
+      image: "/images/img2.png"
     },
     {
       title: "Slow Response Times",
       description: "Connect to CRM, send instant notifications and alerts. Respond to customer inquiries in seconds, not hours.",
       icon: Timer,
-      image: "/images/feature3.png"
+      image: "/images/img3.png"
     },
     {
       title: "Human Error",
