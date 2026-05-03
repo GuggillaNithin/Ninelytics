@@ -18,6 +18,7 @@ import FacebookPage from "@/pages/dashboard/FacebookPage";
 import InstagramPage from "@/pages/dashboard/InstagramPage";
 import LinkedInPage from "@/pages/dashboard/LinkedInPage";
 import SettingsPage from "@/pages/dashboard/SettingsPage";
+import CreatePostPage from "@/pages/dashboard/CreatePostPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
                 <Route index element={<OverviewPage />} />
                 <Route path="connections" element={<ConnectionsPage />} />
+                <Route path="create-post" element={<CreatePostPage />} />
                 <Route path="youtube" element={<YouTubePage />} />
                 <Route path="google-analytics" element={<GoogleAnalyticsPage />} />
                 <Route path="facebook" element={<FacebookPage />} />

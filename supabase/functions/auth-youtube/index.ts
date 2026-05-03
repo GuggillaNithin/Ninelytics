@@ -12,7 +12,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/auth-youtube?action=callback`;
-const APP_REDIRECT = "https://ninelytics.vercel.app/dashboard/connections";
+const APP_REDIRECT = "https://ninelytics.in/dashboard/connections";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {

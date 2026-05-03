@@ -76,10 +76,8 @@ Deno.serve(async (req) => {
       let finalCode = code;
       const errorParam = url.searchParams.get("error");
       
-      const appOrigin = url.origin.replace(
-        "arlnboevgndtpnprolhz.supabase.co", 
-        "ninelytics.vercel.app"
-      );
+      const appOrigin = "https://ninelytics.in";
+
 
       if (errorParam) {
         const errorDesc = url.searchParams.get("error_description") || "OAuth denied";

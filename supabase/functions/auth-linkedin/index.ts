@@ -8,10 +8,10 @@ import {
 
 const LINKEDIN_CLIENT_ID = Deno.env.get("LINKEDIN_CLIENT_ID")!;
 const LINKEDIN_CLIENT_SECRET = Deno.env.get("LINKEDIN_CLIENT_SECRET")!;
-const SUPABASE_URL = "https://arlnboevgndtpnprolhz.supabase.co";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/auth-linkedin?action=callback`;
-const DEFAULT_APP_REDIRECT = "https://ninelytics.vercel.app/dashboard/connections";
+const DEFAULT_APP_REDIRECT = "https://ninelytics.in/dashboard/connections";
 
 function normalizeRedirectUrl(value: string | null | undefined) {
   const candidate = (value || DEFAULT_APP_REDIRECT).trim();
